@@ -1,7 +1,8 @@
 import logging
+from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.models.task import Task
 
 logger = logging.getLogger(__name__)
@@ -29,13 +30,24 @@ async def rank_tasks_for_user(
     energy_level: int,
 ) -> List[Task]:
     """Return ranked active tasks for the user, filtered by energy level."""
+    now = datetime.now(timezone.utc)
     result = await db.execute(
         select(Task).where(
             Task.user_id == user_id,
-            Task.status == "active",
+            or_(
+                Task.status == "active",
+                # Re-activate snoozed tasks whose snooze window has expired
+                (Task.status == "snoozed") & (Task.snooze_until <= now),
+            ),
         )
     )
     tasks = result.scalars().all()
+
+    # Re-activate any expired snoozed tasks
+    for task in tasks:
+        if task.status == "snoozed" and task.snooze_until and task.snooze_until <= now:
+            task.status = "active"
+            task.snooze_until = None
 
     # Update big_rock flags and scores
     for task in tasks:

@@ -9,6 +9,12 @@ import { useEnergy } from '../hooks/useEnergy'
 
 type AppState = 'ENERGY_GATE' | 'FOCUSED' | 'FOCUS_MODE'
 
+const ENERGY_OPTIONS: Record<number, { icon: string; label: string }> = {
+  2: { icon: '🌊', label: 'Low' },
+  3: { icon: '⚡', label: 'Mid' },
+  5: { icon: '🔥', label: 'High' },
+}
+
 export default function FocusPage() {
   const { setEnergyLevel, submitEnergy, isSubmitting } = useEnergy()
   const [confirmedEnergy, setConfirmedEnergy] = useState<number | null>(null)
@@ -52,16 +58,11 @@ export default function FocusPage() {
   useEffect(() => {
     if (confirmedEnergy !== null && !isLoading && !task && !error) {
       setNoMoreTasks(true)
+    } else if (task) {
+      setNoMoreTasks(false)
     }
-  }, [isLoading, task, error, confirmedEnergy])
+  }, [isLoading, task, error]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Transition to FOCUS_MODE 2s after a task first appears
-  useEffect(() => {
-    if (task && appState === 'FOCUSED') {
-      const timer = setTimeout(() => setAppState('FOCUS_MODE'), 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [task, appState])
 
   const handleEnergyConfirm = async (value: number) => {
     setEnergyLevel(value)
@@ -133,12 +134,22 @@ export default function FocusPage() {
               <p className="text-muted-text text-sm">Your current focus</p>
               <h1 className="text-off-white text-2xl font-bold">Next Task</h1>
             </div>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => setAppState('ENERGY_GATE')}
-              className="text-muted-text text-sm hover:text-off-white transition-colors"
+              title="Change energy level"
+              className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl
+                         bg-slate-800/60 border border-slate-700 hover:border-slate-500
+                         transition-colors group"
             >
-              ⚡ Change energy
-            </button>
+              <span className="text-2xl leading-none">
+                {confirmedEnergy !== null ? (ENERGY_OPTIONS[confirmedEnergy]?.icon ?? '⚡') : '⚡'}
+              </span>
+              <span className="text-xs font-medium text-muted-text group-hover:text-off-white transition-colors">
+                {confirmedEnergy !== null ? (ENERGY_OPTIONS[confirmedEnergy]?.label ?? 'Energy') : 'Energy'}
+              </span>
+            </motion.button>
           </div>
 
           {/* Loading */}
@@ -195,13 +206,24 @@ export default function FocusPage() {
           {/* Task card */}
           <AnimatePresence mode="wait">
             {task && !isLoading && (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={completeTask}
-                onSnooze={snoozeTask}
-                onBreakdown={breakdownTask}
-              />
+              <div
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest('button')) return
+                  setAppState('FOCUS_MODE')
+                }}
+                className="cursor-pointer group"
+              >
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={completeTask}
+                  onSnooze={snoozeTask}
+                  onBreakdown={breakdownTask}
+                />
+                <p className="text-center text-muted-text text-xs mt-3 opacity-0 group-hover:opacity-60 transition-opacity">
+                  tap card to enter focus mode
+                </p>
+              </div>
             )}
           </AnimatePresence>
         </div>

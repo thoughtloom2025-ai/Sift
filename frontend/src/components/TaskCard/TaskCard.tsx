@@ -21,6 +21,12 @@ const SOURCE_LABELS: Record<string, string> = {
   manual: 'Manual',
 }
 
+function energyBadge(level: number): { icon: string; label: string } {
+  if (level <= 2) return { icon: '🌊', label: 'Low' }
+  if (level <= 3) return { icon: '⚡', label: 'Mid' }
+  return { icon: '🔥', label: 'High' }
+}
+
 function ProgressRing({ startTime }: { startTime: number }) {
   const [elapsed, setElapsed] = useState(0)
 
@@ -169,17 +175,23 @@ export function TaskCard({ task, onComplete, onSnooze, onBreakdown }: TaskCardPr
           }
         `}
       >
-        {/* Top row: source badge + Big Rock pill */}
+        {/* Top row: source badge + energy + Big Rock pill */}
         <div className="flex items-center justify-between mb-6">
           <span className="text-muted-text text-xs tracking-wide uppercase">
             {SOURCE_LABELS[task.source] ?? task.source}
           </span>
-          {task.is_big_rock && (
-            <span className="text-xs font-semibold text-muted-amber border border-muted-amber/40
-                             rounded-full px-3 py-0.5">
-              Big Rock
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-text flex items-center gap-1">
+              {energyBadge(task.energy_required).icon}
+              <span>{energyBadge(task.energy_required).label}</span>
             </span>
-          )}
+            {task.is_big_rock && (
+              <span className="text-xs font-semibold text-muted-amber border border-muted-amber/40
+                               rounded-full px-3 py-0.5">
+                Big Rock
+              </span>
+            )}
+          </div>
         </div>
 
         {/* ── INVERTED HIERARCHY ────────────────────────────────────────── */}
