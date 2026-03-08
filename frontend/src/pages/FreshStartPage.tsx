@@ -23,14 +23,16 @@ export default function FreshStartPage() {
     setIsResetting(false)
   }
 
-  const handleContinue = () => {
-    navigate('/focus')
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-deep-slate flex items-center justify-center">
-        <div className="text-soft-mint animate-pulse text-lg">Loading...</div>
+        <motion.div
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ duration: 1.8, repeat: Infinity }}
+          className="text-soft-mint text-2xl"
+        >
+          ◎
+        </motion.div>
       </div>
     )
   }
@@ -38,74 +40,85 @@ export default function FreshStartPage() {
   return (
     <div className="min-h-screen bg-deep-slate flex items-center justify-center px-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 28 }}
         className="w-full max-w-md text-center"
       >
         {!resetResult ? (
           <>
-            <div className="text-6xl mb-6">🌅</div>
-            <h1 className="text-3xl font-bold text-off-white mb-3">Welcome back</h1>
-            <p className="text-muted-text mb-2">
-              You've been away for {freshStartData ? Math.round(freshStartData.hours_since_last_login) : 0} hours.
-            </p>
-            <p className="text-muted-text mb-8">
-              Let's clear the old and start fresh.
+            <h1 className="text-4xl font-bold text-off-white mb-4 leading-tight">
+              You've been away.
+            </h1>
+            <p className="text-muted-text text-lg mb-10 leading-readable">
+              Let's not carry yesterday's weight.
             </p>
 
-            <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 mb-6 text-left">
-              <p className="text-off-white font-medium mb-2">Fresh Start will:</p>
-              <ul className="text-muted-text text-sm space-y-2">
-                <li>• Archive old tasks from before your break</li>
-                <li>• Surface your single best next action</li>
-                <li>• Let you start fresh without the pile</li>
+            <div className="bg-[#1E2235] rounded-2xl p-6 border border-slate-700/60 mb-8 text-left">
+              <p className="text-off-white font-medium mb-3">A Fresh Start will:</p>
+              <ul className="text-muted-text text-sm space-y-2 leading-readable">
+                <li>· Archive tasks from before your break</li>
+                <li>· Surface your single best next action</li>
+                <li>· Let you begin without the pile</li>
               </ul>
             </div>
 
             <div className="flex flex-col gap-3">
               <motion.button
                 whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={handleReset}
                 disabled={isResetting}
-                className="w-full py-4 bg-soft-mint text-deep-slate font-semibold rounded-xl text-lg hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                className="w-full py-4 bg-soft-mint text-deep-slate font-semibold
+                           rounded-xl text-lg hover:brightness-105 transition-all
+                           disabled:opacity-50"
               >
-                {isResetting ? 'Clearing...' : 'Fresh Start →'}
+                {isResetting ? 'Clearing…' : 'Clear & Begin →'}
               </motion.button>
               <button
-                onClick={handleContinue}
-                className="text-muted-text text-sm hover:text-off-white transition-colors"
+                onClick={() => navigate('/focus')}
+                className="text-muted-text text-sm hover:text-off-white transition-colors py-2"
               >
-                Skip, keep my tasks
+                Keep my tasks, continue
               </button>
             </div>
           </>
         ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div className="text-6xl mb-6">✨</div>
-            <h1 className="text-3xl font-bold text-off-white mb-3">All clear</h1>
-            <p className="text-muted-text mb-6">{resetResult.message}</p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+          >
+            <h1 className="text-4xl font-bold text-off-white mb-3">
+              You're clear.
+            </h1>
+            <p className="text-muted-text mb-8 leading-readable">{resetResult.message}</p>
 
             {resetResult.tasks_archived > 0 && (
-              <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800 mb-6">
-                <p className="text-muted-text text-sm">
-                  {resetResult.tasks_archived} tasks archived
-                </p>
+              <div className="inline-block bg-slate-700/40 rounded-full px-4 py-1.5 mb-6">
+                <span className="text-muted-text text-sm">
+                  {resetResult.tasks_archived} tasks cleared
+                </span>
               </div>
             )}
 
             {resetResult.next_action_task && (
-              <div className="bg-slate-900 rounded-2xl p-5 border border-soft-mint/20 mb-6 text-left">
-                <p className="text-soft-mint text-xs font-semibold mb-2">SUGGESTED NEXT ACTION</p>
-                <p className="text-off-white font-medium">{resetResult.next_action_task.title}</p>
+              <div className="bg-[#1E2235] rounded-2xl p-5 border border-soft-mint/20 mb-8 text-left">
+                <p className="text-soft-mint text-xs font-semibold mb-2 tracking-wide uppercase">
+                  Your first move
+                </p>
+                <p className="text-off-white font-medium leading-readable">
+                  {resetResult.next_action_task.title}
+                </p>
               </div>
             )}
 
             <motion.button
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleContinue}
-              className="w-full py-4 bg-soft-mint text-deep-slate font-semibold rounded-xl text-lg hover:bg-emerald-400 transition-colors"
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate('/focus')}
+              className="w-full py-4 bg-soft-mint text-deep-slate font-semibold
+                         rounded-xl text-lg hover:brightness-105 transition-all"
             >
               Let's Go →
             </motion.button>
