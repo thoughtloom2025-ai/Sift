@@ -62,6 +62,10 @@ export function useTasks(energyLevel: number) {
     return steps
   }, [task])
 
+  const createTask = useCallback(async (title: string, description?: string): Promise<void> => {
+    await taskService.create({ title, description })
+  }, [])
+
   return {
     task,
     eligibleTasks,
@@ -73,5 +77,6 @@ export function useTasks(energyLevel: number) {
     completeTask,
     snoozeTask,
     breakdownTask,
+    createTask,
   }
 }
