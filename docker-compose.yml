@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sift
+      POSTGRES_PASSWORD: siftpass
+      POSTGRES_DB: sift
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sift -d sift"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build: ./backend
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sift:siftpass@postgres:5432/sift
+      SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5174}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8001}
+      ALLOWED_ORIGINS: '["http://localhost:5174","http://localhost:3000","https://sift-app.loca.lt","https://sift-api.loca.lt"]'
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
+      NOTION_CLIENT_ID: ${NOTION_CLIENT_ID:-}
+      NOTION_CLIENT_SECRET: ${NOTION_CLIENT_SECRET:-}
+      FRESH_START_THRESHOLD_HOURS: "18"
+      SYNC_INTERVAL_MINUTES: "30"
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5174:80"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:8001
+
+volumes:
+  postgres_data:
