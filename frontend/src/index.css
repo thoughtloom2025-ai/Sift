@@ -7,9 +7,10 @@
 }
 
 body {
-  background-color: #0F172A;
+  background-color: #1A1C2E;
   color: #F8FAFC;
   font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
   margin: 0;
   padding: 0;
 }
@@ -18,9 +19,14 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0F172A;
+  background: #1A1C2E;
 }
 ::-webkit-scrollbar-thumb {
   background: #334155;
   border-radius: 3px;
+}
+
+@keyframes breathe {
+  0%, 100% { background-color: #1A1C2E; }
+  50%       { background-color: #1E2235; }
 }

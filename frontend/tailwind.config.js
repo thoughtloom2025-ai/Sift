@@ -7,15 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        'deep-slate': '#0F172A',
+        'deep-slate': '#1A1C2E',
         'cloud-gray': '#CBD5E1',
-        'soft-mint': '#4ECCA3',
-        'muted-amber': '#F59E0B',
+        'soft-mint': '#B2D8C8',
+        'muted-amber': '#E2B07E',
         'off-white': '#F8FAFC',
         'muted-text': '#94A3B8',
+        'focus-slate': '#1E2235',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      lineHeight: {
+        'readable': '1.6',
       },
     },
   },
