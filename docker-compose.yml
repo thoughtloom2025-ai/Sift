@@ -32,7 +32,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5174}
       BACKEND_URL: ${BACKEND_URL:-http://localhost:8001}
-      ALLOWED_ORIGINS: '["http://localhost:5174","http://localhost:3000","https://sift-frontend-prod.loca.lt","https://sift-backend-prod.loca.lt"]'
+      ALLOWED_ORIGINS: '["http://localhost:5174","http://localhost:3000","https://sift-app.loca.lt","https://sift-api.loca.lt"]'
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
       NOTION_CLIENT_ID: ${NOTION_CLIENT_ID:-}
