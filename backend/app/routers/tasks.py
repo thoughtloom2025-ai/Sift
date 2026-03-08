@@ -10,7 +10,7 @@ from app.models.task import Task
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse, SnoozeRequest, SubStepsUpdate
 from app.services.ranking_service import get_next_task, rank_tasks_for_user
-from app.services.gemini_service import generate_task_breakdown
+from app.services.gemini_service import generate_task_breakdown, extract_task_entities
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -40,14 +40,29 @@ async def create_task(
     db: AsyncSession = Depends(get_db),
 ):
     from app.services.ranking_service import is_big_rock, calculate_priority_score
+
+    impact = task_data.impact
+    urgency = task_data.urgency
+    energy_required = task_data.energy_required
+
+    # If any ratings are missing, ask Gemini to infer them
+    if impact is None or urgency is None or energy_required is None:
+        combined = task_data.title
+        if task_data.description:
+            combined += f"\n{task_data.description}"
+        entities = await extract_task_entities(combined)
+        impact = impact if impact is not None else entities["impact"]
+        urgency = urgency if urgency is not None else entities["urgency"]
+        energy_required = energy_required if energy_required is not None else entities["energy_required"]
+
     task = Task(
         user_id=current_user.id,
         title=task_data.title,
         description=task_data.description,
         source="manual",
-        impact=task_data.impact,
-        urgency=task_data.urgency,
-        energy_required=task_data.energy_required,
+        impact=impact,
+        urgency=urgency,
+        energy_required=energy_required,
     )
     task.is_big_rock = is_big_rock(task)
     task.priority_score = calculate_priority_score(task, energy_level=3)

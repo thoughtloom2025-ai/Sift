@@ -6,14 +6,14 @@ from typing import Optional, List
 class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    impact: int = 3
-    urgency: int = 3
-    energy_required: int = 3
+    impact: Optional[int] = None
+    urgency: Optional[int] = None
+    energy_required: Optional[int] = None
 
-    @field_validator("impact", "urgency", "energy_required")
+    @field_validator("impact", "urgency", "energy_required", mode="before")
     @classmethod
-    def validate_range(cls, v: int) -> int:
-        if not 1 <= v <= 5:
+    def validate_range(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and not 1 <= v <= 5:
             raise ValueError("Value must be between 1 and 5")
         return v
 
