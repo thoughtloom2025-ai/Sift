@@ -1,70 +1,33 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { TaskCard } from '../components/TaskCard/TaskCard'
+import { EnergyGate } from '../components/EnergyGate/EnergyGate'
 import { AppLayout } from '../components/layout/AppLayout'
-import { EnergySlider } from '../components/EnergySlider/EnergySlider'
 import { useTasks } from '../hooks/useTasks'
 import { useEnergy } from '../hooks/useEnergy'
-import type { Task } from '../types'
 
-const SOURCE_LABELS: Record<string, string> = {
-  gmail: 'Gmail',
-  slack: 'Slack',
-  notion: 'Notion',
-  manual: 'Manual',
-}
-
-function EligibleTaskRow({ task, onSelect }: { task: Task; onSelect: (t: Task) => void }) {
-  return (
-    <motion.button
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      onClick={() => onSelect(task)}
-      className="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl bg-cloud-gray/10 border border-cloud-gray/20 hover:border-soft-mint/40 hover:bg-cloud-gray/20 transition-all"
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          {task.is_big_rock && (
-            <span className="text-xs font-semibold text-muted-amber border border-muted-amber/40 rounded px-1.5 py-0.5 shrink-0">
-              Big Rock
-            </span>
-          )}
-          <span className="text-off-white text-sm font-medium truncate">{task.title}</span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-muted-text">
-          <span>{SOURCE_LABELS[task.source] ?? task.source}</span>
-          <span>Energy {task.energy_required}/5</span>
-          <span>Impact {task.impact}/5</span>
-        </div>
-      </div>
-      <span className="text-muted-text text-xs shrink-0">Focus →</span>
-    </motion.button>
-  )
-}
+type AppState = 'ENERGY_GATE' | 'FOCUSED' | 'FOCUS_MODE'
 
 export default function FocusPage() {
-  const { energyLevel: pendingEnergy, setEnergyLevel, submitEnergy, isSubmitting } = useEnergy()
+  const { setEnergyLevel, submitEnergy, isSubmitting } = useEnergy()
   const [confirmedEnergy, setConfirmedEnergy] = useState<number | null>(null)
-  const [editingEnergy, setEditingEnergy] = useState(false)
-  const [showMore, setShowMore] = useState(false)
+  const [appState, setAppState] = useState<AppState>('ENERGY_GATE')
+  const [noMoreTasks, setNoMoreTasks] = useState(false)
+
   const {
     task,
-    eligibleTasks,
     isLoading,
     error,
     fetchNext,
     fetchEligible,
-    selectTask,
     completeTask,
     snoozeTask,
     breakdownTask,
   } = useTasks(confirmedEnergy ?? 3)
-  const [noMoreTasks, setNoMoreTasks] = useState(false)
 
   useEffect(() => {
     if (confirmedEnergy !== null) {
       setNoMoreTasks(false)
-      setShowMore(false)
       fetchNext()
       fetchEligible()
     }
@@ -76,90 +39,108 @@ export default function FocusPage() {
     }
   }, [isLoading, task, error, confirmedEnergy])
 
-  const handleConfirmEnergy = async () => {
-    const success = await submitEnergy(pendingEnergy)
+  // Transition to FOCUS_MODE 2s after a task first appears
+  useEffect(() => {
+    if (task && appState === 'FOCUSED') {
+      const timer = setTimeout(() => setAppState('FOCUS_MODE'), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [task, appState])
+
+  const handleEnergyConfirm = async (value: number) => {
+    setEnergyLevel(value)
+    const success = await submitEnergy(value)
     if (success) {
-      setConfirmedEnergy(pendingEnergy)
-      setEditingEnergy(false)
+      setConfirmedEnergy(value)
+      setAppState('FOCUSED')
     }
   }
 
-  const handleSelectFromList = (selected: Task) => {
-    selectTask(selected)
-    setShowMore(false)
+  const handleExitFocusMode = () => setAppState('FOCUSED')
+
+  // ── FOCUS MODE: fullscreen breathing background, no nav ─────────────────────
+  if (appState === 'FOCUS_MODE' && task) {
+    return (
+      <motion.div
+        animate={{ backgroundColor: ['#1A1C2E', '#1E2235', '#1A1C2E'] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
+        onClick={handleExitFocusMode}
+      >
+        <p className="text-muted-text text-xs mb-8 opacity-40 select-none">
+          tap anywhere to exit focus mode
+        </p>
+
+        {/* Stop click propagation so card interactions don't exit focus mode */}
+        <div
+          className="w-full max-w-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <AnimatePresence mode="wait">
+            <TaskCard
+              key={task.id}
+              task={task}
+              onComplete={completeTask}
+              onSnooze={snoozeTask}
+              onBreakdown={breakdownTask}
+            />
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    )
   }
 
-  // Tasks shown in the list (exclude the current focus task)
-  const otherTasks = eligibleTasks.filter((t) => t.id !== task?.id)
-
-  if (confirmedEnergy === null || editingEnergy) {
+  // ── ENERGY GATE ─────────────────────────────────────────────────────────────
+  if (appState === 'ENERGY_GATE') {
     return (
       <AppLayout>
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md text-center"
-          >
-            {editingEnergy && (
-              <button
-                onClick={() => setEditingEnergy(false)}
-                className="mb-6 text-muted-text text-sm hover:text-off-white transition-colors block mx-auto"
-              >
-                ← Back to focus
-              </button>
-            )}
-            <h1 className="text-3xl font-bold text-off-white mb-2">How's your bandwidth?</h1>
-            <p className="text-muted-text mb-10">
-              Be honest. Sift will match tasks to your energy.
-            </p>
-
-            <EnergySlider
-              value={pendingEnergy}
-              onChange={setEnergyLevel}
-              disabled={isSubmitting}
+          <AnimatePresence mode="wait">
+            <EnergyGate
+              onConfirm={handleEnergyConfirm}
+              isSubmitting={isSubmitting}
             />
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleConfirmEnergy}
-              disabled={isSubmitting || pendingEnergy === 0}
-              className="mt-10 w-full py-4 bg-soft-mint text-deep-slate font-semibold rounded-xl text-lg hover:bg-emerald-400 transition-colors disabled:opacity-50"
-            >
-              {isSubmitting ? 'Loading...' : "Let's Focus →"}
-            </motion.button>
-          </motion.div>
+          </AnimatePresence>
         </div>
       </AppLayout>
     )
   }
 
+  // ── FOCUSED: task visible, nav visible ──────────────────────────────────────
   return (
     <AppLayout>
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg">
+          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-muted-text text-sm">Your current focus</p>
               <h1 className="text-off-white text-2xl font-bold">Next Task</h1>
             </div>
             <button
-              onClick={() => setEditingEnergy(true)}
-              className="text-muted-text text-sm hover:text-off-white transition-colors flex items-center gap-1"
+              onClick={() => setAppState('ENERGY_GATE')}
+              className="text-muted-text text-sm hover:text-off-white transition-colors"
             >
-              ⚡ Energy: {confirmedEnergy}/5
+              ⚡ Change energy
             </button>
           </div>
 
+          {/* Loading */}
           {isLoading && (
             <div className="text-center py-20">
-              <div className="text-soft-mint text-4xl mb-4 animate-pulse">⏳</div>
-              <p className="text-muted-text">Finding your next task...</p>
+              <motion.div
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="text-soft-mint text-4xl mb-4"
+              >
+                ◎
+              </motion.div>
+              <p className="text-muted-text">Finding your next task…</p>
             </div>
           )}
 
-          {error && (
+          {/* Error */}
+          {error && !isLoading && (
             <div className="text-center py-20">
               <p className="text-muted-amber mb-4">{error}</p>
               <button onClick={fetchNext} className="text-soft-mint hover:underline">
@@ -168,20 +149,25 @@ export default function FocusPage() {
             </div>
           )}
 
+          {/* All clear */}
           {noMoreTasks && !isLoading && !error && (
             <div className="text-center py-20">
-              <div className="text-5xl mb-4">🎉</div>
-              <h2 className="text-off-white text-xl font-semibold mb-2">All clear!</h2>
-              <p className="text-muted-text mb-6">No tasks match your current energy level.</p>
+              <div className="text-5xl mb-4">🌿</div>
+              <h2 className="text-off-white text-xl font-semibold mb-2">All clear</h2>
+              <p className="text-muted-text mb-6">
+                No tasks match your current energy level.
+              </p>
               <button
-                onClick={() => setEditingEnergy(true)}
-                className="bg-soft-mint text-deep-slate font-semibold px-6 py-3 rounded-xl hover:bg-emerald-400 transition-colors"
+                onClick={() => setAppState('ENERGY_GATE')}
+                className="bg-soft-mint text-deep-slate font-semibold px-6 py-3
+                           rounded-xl hover:brightness-105 transition-all"
               >
-                Adjust Energy Level
+                Adjust energy
               </button>
             </div>
           )}
 
+          {/* Task card */}
           <AnimatePresence mode="wait">
             {task && !isLoading && (
               <TaskCard
@@ -193,43 +179,6 @@ export default function FocusPage() {
               />
             )}
           </AnimatePresence>
-
-          {/* Show More escape hatch — only when a task is shown and there are others */}
-          {task && !isLoading && otherTasks.length > 0 && (
-            <div className="mt-6">
-              <button
-                onClick={() => setShowMore((v) => !v)}
-                className="w-full text-center text-muted-text text-sm hover:text-off-white transition-colors flex items-center justify-center gap-2 py-2"
-              >
-                <motion.span
-                  animate={{ rotate: showMore ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="inline-block"
-                >
-                  ▾
-                </motion.span>
-                {showMore
-                  ? 'Hide task list'
-                  : `Show ${otherTasks.length} more eligible task${otherTasks.length !== 1 ? 's' : ''}`}
-              </button>
-
-              <AnimatePresence>
-                {showMore && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="overflow-hidden mt-3 space-y-2"
-                  >
-                    {otherTasks.map((t) => (
-                      <EligibleTaskRow key={t.id} task={t} onSelect={handleSelectFromList} />
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
         </div>
       </div>
     </AppLayout>
